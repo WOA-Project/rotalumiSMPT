@@ -47,7 +47,9 @@ VOID  TpmFail(_In_ const char *Function, _In_ int Line, _In_ int Code);
 #define FTPM_NV_TPM_SIZE                0x4000
 #define FTPM_NV_CHECKSUM_OFFSET         0x7bf4
 #define FTPM_NV_REVISION_OFFSET         0x7bf8
-#define FTPM_NV_CHIP_REVISION           0x0011540020170213ULL   // constant in .text (0x1c0037180)
+#define FIRMWARE_V1                     (0x20170619ULL)
+#define FIRMWARE_V2                     (0x00163636ULL)
+#define FTPM_NV_CHIP_REVISION           ((FIRMWARE_V2 << 32) | FIRMWARE_V1)   // constant in .text (0x1c0037180)
 
 #define FTPM_NV_FILE_PATH_ESP           L"\\EFI\\Microsoft\\Boot\\NVChip.dat"
 #define FTPM_NV_FILE_PATH_ESP_FALLBACK  L"\\Boot\\NVChip.dat"
