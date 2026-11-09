@@ -5,7 +5,7 @@
 .DESCRIPTION
     Clones the revisions that reproduce the shipped binary (PE timestamp 2019-04-13):
 
-      ms-tpm-20-ref  fc44e52e2640502ed64699c1cb631c6af69ba53f  (2018-10-29, the last revision
+      ms-tpm-20-ref  ee21db0a941decd3cac67925ea3310873af60ab3  (2018-10-29, the last revision
                      before rev. 1.52; the structure sizes of the binary - OBJECT 0x718, gp 0x318,
                      gr 0x138, gc 0x6ec - only come out with this generation of the code)
       SymCrypt       286762b7730e2b780678f5ab11fef2b1bad639e0  (2019-04-11, "SymCrypt v87")
@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 
 $components = @(
     @{ Name = 'ms-tpm-20-ref'; Url = 'https://github.com/microsoft/ms-tpm-20-ref';
-       Commit = 'fc44e52e2640502ed64699c1cb631c6af69ba53f' },
+       Commit = 'ee21db0a941decd3cac67925ea3310873af60ab3' },
     @{ Name = 'SymCrypt'; Url = 'https://github.com/microsoft/SymCrypt.git';
        Commit = '286762b7730e2b780678f5ab11fef2b1bad639e0' }
 )

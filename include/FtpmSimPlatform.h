@@ -110,8 +110,9 @@ VOID    _plat__NvMemoryRead(ULONG StartOffset, ULONG Size, PVOID Data);
 VOID    _plat__NvMemoryWrite(ULONG StartOffset, ULONG Size, const VOID *Data);
 VOID    _plat__NvMemoryClear(ULONG StartOffset, ULONG Size);
 VOID    _plat__NvMemoryMove(ULONG SourceOffset, ULONG DestOffset, ULONG Size);
-int     _plat__NvIsDifferent(ULONG StartOffset, ULONG Size, PVOID Data);
-int     _plat__IsNvAvailable(VOID);
+int     _plat__NvGetChangedStatus(ULONG StartOffset, ULONG Size, PVOID Data);
+int     _plat__GetNvReadyState(VOID);
+VOID    _plat__TearDown();
 
 // PlatformPower.c / PlatformClock.c
 int     _plat__Signal_PowerOn(VOID);
@@ -126,7 +127,7 @@ VOID    _plat__TimerReset(VOID);
 VOID    _plat__TimerRestart(VOID);
 int     _plat__TimerWasReset(VOID);
 int     _plat__TimerWasStopped(VOID);
-VOID    _plat__ClockAdjustRate(int Adjustment);
+VOID    _plat__ClockRateAdjust(int Adjustment);
 
 // PlatformEntropy.c
 ULONG   FtpmGetEntropy(_Out_writes_bytes_(Size) PUCHAR Buffer, _In_ ULONG Size);

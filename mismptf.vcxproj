@@ -92,7 +92,9 @@
     <ClCompile Include="src\PlatformPower.c" />
     <ClCompile Include="src\PlatformEntropy.c" />
     <ClCompile Include="src\PlatformFail.c" />
-    <ClCompile Include="src\PlatformACT.c" />
+    <ClCompile Include="src\VendorInfo.c" />
+    <ClCompile Include="src\ExtraData.c" />
+    <ClCompile Include="src\PlatformPcr.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\FtpmSim.h" />
@@ -112,19 +114,19 @@
     binary links (hashes, AES, kernel environment, CPU detection).
   -->
   <PropertyGroup Condition="'$(mismptfBuildTpmLibrary)'=='true'">
-    <FtpmLibIncludes>$(TpmRefRoot)\TPMCmd\tpm\include;$(TpmRefRoot)\TPMCmd\tpm\include\prototypes;$(TpmRefRoot)\TPMCmd\Platform\include;$(TpmRefRoot)\TPMCmd\Platform\include\prototypes;$(ProjectDir)Tpm\Glue\include;$(ProjectDir)Tpm\Glue\include\kmshim;$(SymCryptRoot)\inc;$(SymCryptRoot)\lib</FtpmLibIncludes>
+    <FtpmLibIncludes>$(TpmRefRoot)\TPMCmd\tpm\cryptolibs\TpmBigNum\include;$(TpmRefRoot)\TPMCmd\tpm\cryptolibs\common\include;$(TpmRefRoot)\TPMCmd\TpmConfiguration;$(TpmRefRoot)\TPMCmd\tpm\include;$(TpmRefRoot)\TPMCmd\tpm\include\platform_interface;$(TpmRefRoot)\TPMCmd\tpm\include\platform_interface\prototypes;$(TpmRefRoot)\TPMCmd\tpm\include\private;$(TpmRefRoot)\TPMCmd\tpm\include\private\prototypes;$(TpmRefRoot)\TPMCmd\tpm\include\public;$(TpmRefRoot)\TPMCmd\tpm\include\public\prototypes;$(TpmRefRoot)\TPMCmd\Platform\include;$(TpmRefRoot)\TPMCmd\Platform\include\prototypes;$(ProjectDir)Tpm\Glue\include;$(ProjectDir)Tpm\Glue\include\kmshim;$(SymCryptRoot)\inc;$(SymCryptRoot)\lib</FtpmLibIncludes>
     <!-- USE_SPEC_COMPLIANT_PROOFS=0 / SKIP_PROOF_ERRORS=1: the shipped build keeps the pre-errata 32 byte proofs (PROOF_SIZE = SHA-256 digest) with 48 byte primary seeds -->
-    <FtpmLibDefines>NO_LONGJMP;NDEBUG;_CRT_SECURE_NO_WARNINGS;SYM_LIB=SYMCRYPT;HASH_LIB=SYMCRYPT;MATH_LIB=MSBN</FtpmLibDefines>
+    <FtpmLibDefines>NO_LONGJMP;NDEBUG;_CRT_SECURE_NO_WARNINGS;SYM_LIB=SYMCRYPT;HASH_LIB=SYMCRYPT;MATH_LIB=TpmBigNum;BN_MATH_LIB=MSBN</FtpmLibDefines>
   </PropertyGroup>
   <ItemGroup Condition="'$(mismptfBuildTpmLibrary)'=='true'">
-    <ClCompile Include="$(TpmRefRoot)\TPMCmd\tpm\src\**\*.c"
-               Exclude="$(TpmRefRoot)\TPMCmd\tpm\src\crypt\RsaKeyCache.c;$(TpmRefRoot)\TPMCmd\tpm\src\crypt\ossl\**;$(TpmRefRoot)\TPMCmd\tpm\src\crypt\ltc\**;$(TpmRefRoot)\TPMCmd\tpm\src\crypt\wolf\**">
+    <ClCompile Include="$(TpmRefRoot)\TPMCmd\tpm\src\**\*.c;$(TpmRefRoot)\TPMCmd\tpm\cryptolibs\TpmBigNum\**\*.c"
+               Exclude="$(TpmRefRoot)\TPMCmd\tpm\src\crypt\RsaKeyCache.c">
       <AdditionalIncludeDirectories>$(FtpmLibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>$(FtpmLibDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>
       <ObjectFileName>$(IntDir)tpm\%(Filename).obj</ObjectFileName>
     </ClCompile>
-    <ClCompile Include="Tpm\Glue\src\TpmToMsBnMath.c">
+    <ClCompile Include="Tpm\Glue\src\BnToMSBNMath.c">
       <AdditionalIncludeDirectories>$(FtpmLibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>$(FtpmLibDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level3</WarningLevel>

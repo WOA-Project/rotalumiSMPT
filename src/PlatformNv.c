@@ -115,7 +115,7 @@ _plat__NvMemoryMove(
 // binary both are folded into their callers: the comparison is a memcmp against the
 // image and NV is always available.
 int
-_plat__NvIsDifferent(
+_plat__NvGetChangedStatus(
     ULONG StartOffset,
     ULONG Size,
     PVOID Data
@@ -130,7 +130,7 @@ _plat__NvIsDifferent(
 }
 
 int
-_plat__IsNvAvailable(
+_plat__GetNvReadyState(
     VOID
     )
 {
@@ -438,4 +438,33 @@ FtpmNvIsFileOpen(
     )
 {
     return (BOOLEAN)(s_NvFile != NULL);
+}
+
+//***_plat__TearDown
+// notify platform that TPM_TearDown was called so platform can cleanup or
+// zeroize anything in the Platform.  This should zeroize NV as well.
+VOID _plat__TearDown()
+{
+    FILE_DISPOSITION_INFORMATION disposition;
+    IO_STATUS_BLOCK iosb;
+
+    if (KeGetCurrentIrql() != PASSIVE_LEVEL)
+    {
+        return;
+    }
+
+    if (s_NvFile != NULL)
+    {
+        disposition.DeleteFile = TRUE;
+
+        ZwSetInformationFile(
+            s_NvFile,
+            &iosb,
+            &disposition,
+            sizeof(disposition),
+            FileDispositionInformation);
+
+        ZwClose(s_NvFile);
+        s_NvFile = NULL;
+    }
 }
