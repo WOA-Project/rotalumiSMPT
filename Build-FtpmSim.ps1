@@ -16,7 +16,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$proj = Join-Path $PSScriptRoot 'ftpmsim.vcxproj'
+$proj = Join-Path $PSScriptRoot 'mismptf.vcxproj'
 
 $tp = if ($WorkRoot) { Join-Path $WorkRoot 'ThirdParty' } else { Join-Path $PSScriptRoot 'ThirdParty' }
 if (-not (Test-Path (Join-Path $tp 'ms-tpm-20-ref\TPMCmd')) -or -not (Test-Path (Join-Path $tp 'SymCrypt\lib'))) {
