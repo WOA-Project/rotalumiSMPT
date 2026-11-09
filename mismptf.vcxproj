@@ -92,7 +92,6 @@
     <ClCompile Include="src\PlatformPower.c" />
     <ClCompile Include="src\PlatformEntropy.c" />
     <ClCompile Include="src\PlatformFail.c" />
-    <ClCompile Include="src\PlatformACT.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\FtpmSim.h" />
