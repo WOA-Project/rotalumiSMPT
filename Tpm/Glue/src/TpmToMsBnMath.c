@@ -31,18 +31,18 @@
 typedef crypt_uword_t   W;
 
 // Largest operand and product (in words) the TPM code ever hands to the math library.
-#define OPW         ((unsigned)BITS_TO_CRYPT_WORDS(LARGEST_NUMBER_BITS))
+#define OPW         ((W)BITS_TO_CRYPT_WORDS(LARGEST_NUMBER_BITS))
 #define PRODW       (2 * OPW + 2)
-#define ECW         ((unsigned)BITS_TO_CRYPT_WORDS(MAX_ECC_KEY_BITS))
+#define ECW         ((W)BITS_TO_CRYPT_WORDS(MAX_ECC_KEY_BITS))
 
-static unsigned     s_peakWords;        // statistics for MathLibSimulationEnd()
-static unsigned     s_modExpCalls;
-static unsigned     s_eccMultCalls;
+static W     s_peakWords;        // statistics for MathLibSimulationEnd()
+static W     s_modExpCalls;
+static W     s_eccMultCalls;
 
 //** Plain word array helpers
 
-static unsigned
-Len(const W *a, unsigned n)
+static W
+Len(const W *a, W n)
 {
     while(n > 0 && a[n - 1] == 0)
         n--;
@@ -50,24 +50,24 @@ Len(const W *a, unsigned n)
 }
 
 static void
-Zero(W *a, unsigned n)
+Zero(W *a, W n)
 {
-    unsigned i;
+    W i;
     for(i = 0; i < n; i++)
         a[i] = 0;
 }
 
 static void
-Copy(W *d, const W *s, unsigned n)
+Copy(W *d, const W *s, W n)
 {
-    unsigned i;
+    W i;
     for(i = 0; i < n; i++)
         d[i] = s[i];
 }
 
 // Compare two normalised (no leading zero words) numbers.
 static int
-Cmp(const W *a, unsigned na, const W *b, unsigned nb)
+Cmp(const W *a, W na, const W *b, W nb)
 {
     if(na != nb)
         return na > nb ? 1 : -1;
@@ -82,10 +82,10 @@ Cmp(const W *a, unsigned na, const W *b, unsigned nb)
 
 // r = a + b over n words, returns the carry
 static W
-AddN(W *r, const W *a, const W *b, unsigned n)
+AddN(W *r, const W *a, const W *b, W n)
 {
     W carry = 0;
-    unsigned i;
+    W i;
     for(i = 0; i < n; i++)
     {
         W t = a[i] + carry;
@@ -99,10 +99,10 @@ AddN(W *r, const W *a, const W *b, unsigned n)
 
 // r = a - b over n words, returns the borrow
 static W
-SubN(W *r, const W *a, const W *b, unsigned n)
+SubN(W *r, const W *a, const W *b, W n)
 {
     W borrow = 0;
-    unsigned i;
+    W i;
     for(i = 0; i < n; i++)
     {
         W t = a[i] - borrow;
@@ -131,9 +131,9 @@ Mac(W a, W b, W acc, W *carry)
 
 // r (na + nb words) = a * b
 static void
-Mul(W *r, const W *a, unsigned na, const W *b, unsigned nb)
+Mul(W *r, const W *a, W na, const W *b, W nb)
 {
-    unsigned i, j;
+    W i, j;
     Zero(r, na + nb);
     for(i = 0; i < nb; i++)
     {
@@ -144,17 +144,17 @@ Mul(W *r, const W *a, unsigned na, const W *b, unsigned nb)
     }
 }
 
-static unsigned
-BitLen(const W *a, unsigned n)
+static W
+BitLen(const W *a, W n)
 {
     if(n == 0)
         return 0;
-    return (n - 1) * RADIX_BITS + (unsigned)Msb(a[n - 1]) + 1;
+    return (n - 1) * RADIX_BITS + (W)Msb(a[n - 1]) + 1;
 }
 
 // In-place shift of n words by one bit, returns the bit shifted out
 static W
-Shr1(W *a, unsigned n)
+Shr1(W *a, W n)
 {
     W out = 0;
     while(n > 0)
@@ -170,11 +170,11 @@ Shr1(W *a, unsigned n)
 
 // d (n + 1 words) = s (n words) << bits
 static void
-ShlTo(W *d, const W *s, unsigned n, unsigned bits)
+ShlTo(W *d, const W *s, W n, W bits)
 {
-    unsigned ws = bits / RADIX_BITS;
-    unsigned bs = bits % RADIX_BITS;
-    unsigned i;
+    W ws = bits / RADIX_BITS;
+    W bs = bits % RADIX_BITS;
+    W i;
     for(i = 0; i < n; i++)
     {
         d[i + ws] |= s[i] << bs;
@@ -188,14 +188,14 @@ ShlTo(W *d, const W *s, unsigned n, unsigned bits)
 // Shift-and-subtract aligned to the top bit, so the cost is proportional to the
 // size of the quotient.
 static void
-DivMod(W *q, W *r, const W *a, unsigned na, const W *b, unsigned nb)
+DivMod(W *q, W *r, const W *a, W na, const W *b, W nb)
 {
     W       rem[PRODW + 1];
     W       sh[PRODW + 2];
-    unsigned la = Len(a, na);
-    unsigned lb = Len(b, nb);
-    unsigned ba = BitLen(a, la);
-    unsigned bb = BitLen(b, lb);
+    W la = Len(a, na);
+    W lb = Len(b, nb);
+    W ba = BitLen(a, la);
+    W bb = BitLen(b, lb);
     int      s;
 
     pAssert(lb != 0 && na <= PRODW);
@@ -205,7 +205,7 @@ DivMod(W *q, W *r, const W *a, unsigned na, const W *b, unsigned nb)
     Zero(rem + la, PRODW + 1 - la);
     if(ba >= bb)
     {
-        unsigned wlen = la + 1;
+        W wlen = la + 1;
         Zero(sh, PRODW + 2);
         ShlTo(sh, b, lb, ba - bb);
         for(s = (int)(ba - bb); s >= 0; s--)
@@ -227,7 +227,7 @@ DivMod(W *q, W *r, const W *a, unsigned na, const W *b, unsigned nb)
 }
 
 static void
-NoteScratch(unsigned words)
+NoteScratch(W words)
 {
     if(words > s_peakWords)
         s_peakWords = words;
@@ -237,7 +237,7 @@ NoteScratch(unsigned words)
 
 typedef struct
 {
-    unsigned    n;              // words in the modulus
+    W    n;              // words in the modulus
     W           m[PRODW];       // modulus
     W           minv;           // -m^-1 mod 2^RADIX_BITS
     W           r2[PRODW];      // R^2 mod m, R = 2^(n * RADIX_BITS)
@@ -248,8 +248,8 @@ static void
 MontMul(W *r, const W *a, const W *b, const MONT *c)
 {
     W           t[PRODW + 2];
-    unsigned    n = c->n;
-    unsigned    i, j;
+    W    n = c->n;
+    W    i, j;
 
     Zero(t, n + 2);
     for(i = 0; i < n; i++)
@@ -277,12 +277,12 @@ MontMul(W *r, const W *a, const W *b, const MONT *c)
 
 // Prepare a context for the odd modulus m (nm normalised words).
 static void
-MontInit(MONT *c, const W *m, unsigned nm)
+MontInit(MONT *c, const W *m, W nm)
 {
     W           x;
-    unsigned    i;
+    W    i;
     W           t[PRODW + 1];
-    unsigned    bitsR;
+    W    bitsR;
 
     c->n = nm;
     Copy(c->m, m, nm);
@@ -298,7 +298,7 @@ MontInit(MONT *c, const W *m, unsigned nm)
     for(i = 0; i < bitsR; i++)
     {
         W top = t[nm - 1] >> (RADIX_BITS - 1);
-        unsigned j;
+        W j;
         for(j = nm - 1; j > 0; j--)
             t[j] = (t[j] << 1) | (t[j - 1] >> (RADIX_BITS - 1));
         t[0] <<= 1;
@@ -313,9 +313,9 @@ MontInit(MONT *c, const W *m, unsigned nm)
 
 // Copy a word array into a bigNum, checking that it fits.
 static BOOL
-Store(bigNum bn, const W *a, unsigned n)
+Store(bigNum bn, const W *a, W n)
 {
-    unsigned l = Len(a, n);
+    W l = Len(a, n);
     pAssert(bn->allocated >= l);
     if(bn->allocated < l)
         return FALSE;
@@ -372,9 +372,9 @@ BnModMult(
 {
     W           prod[PRODW];
     W           rem[PRODW];
-    unsigned    lm = Len(modulus->d, modulus->size);
-    unsigned    l1 = Len(op1->d, op1->size);
-    unsigned    l2 = Len(op2->d, op2->size);
+    W    lm = Len(modulus->d, modulus->size);
+    W    l1 = Len(op1->d, op1->size);
+    W    l2 = Len(op2->d, op2->size);
 
     pAssert(BnGetAllocated(result) >= BnGetSize(modulus));
     pAssert(l1 + l2 <= PRODW && lm != 0);
@@ -394,8 +394,8 @@ BnMult(
     )
 {
     W           prod[PRODW];
-    unsigned    l1 = Len(multiplicand->d, multiplicand->size);
-    unsigned    l2 = Len(multiplier->d, multiplier->size);
+    W    l1 = Len(multiplicand->d, multiplicand->size);
+    W    l2 = Len(multiplier->d, multiplier->size);
 
     pAssert(result->allocated >=
             (BITS_TO_CRYPT_WORDS(BnSizeInBits(multiplicand)
@@ -419,8 +419,8 @@ BnDiv(
 {
     W           q[PRODW];
     W           r[PRODW];
-    unsigned    la = Len(dividend->d, dividend->size);
-    unsigned    lb = Len(divisor->d, divisor->size);
+    W    la = Len(dividend->d, dividend->size);
+    W    lb = Len(divisor->d, divisor->size);
 
     pAssert(!BnEqualZero(divisor));
     if(la < lb)
@@ -432,7 +432,7 @@ BnDiv(
         return TRUE;
     }
     pAssert((quotient == NULL)
-            || (quotient->allocated >= (unsigned)(dividend->size - divisor->size)));
+            || (quotient->allocated >= (W)(dividend->size - divisor->size)));
     pAssert((remainder == NULL) || (remainder->allocated >= divisor->size));
     DivMod(q, r, dividend->d, la, divisor->d, lb);
     NoteScratch(2 * PRODW);
@@ -455,8 +455,8 @@ BnGcd(
     W           a[PRODW];
     W           b[PRODW];
     W           r[PRODW];
-    unsigned    la = Len(number1->d, number1->size);
-    unsigned    lb = Len(number2->d, number2->size);
+    W    la = Len(number1->d, number1->size);
+    W    lb = Len(number2->d, number2->size);
 
     pAssert(gcd != NULL);
     Copy(a, number1->d, la);
@@ -475,14 +475,14 @@ BnGcd(
 
 // result = base^exp mod m for an odd modulus, Montgomery form, left to right.
 static void
-ModExpOdd(W *res, const W *base, unsigned nbase, const W *exp, unsigned nexp,
-          const W *m, unsigned nm)
+ModExpOdd(W *res, const W *base, W nbase, const W *exp, W nexp,
+          const W *m, W nm)
 {
     MONT        c;
     W           b[PRODW];
     W           x[PRODW];
     W           one[PRODW];
-    unsigned    i;
+    W    i;
     int         bit;
 
     MontInit(&c, m, nm);
@@ -516,14 +516,14 @@ ModExpOdd(W *res, const W *base, unsigned nbase, const W *exp, unsigned nexp,
 
 // Slow path for even moduli
 static void
-ModExpAny(W *res, const W *base, unsigned nbase, const W *exp, unsigned nexp,
-          const W *m, unsigned nm)
+ModExpAny(W *res, const W *base, W nbase, const W *exp, W nexp,
+          const W *m, W nm)
 {
     W           b[PRODW];
     W           x[PRODW];
     W           prod[PRODW];
     int         bit;
-    unsigned    lx = 1;
+    W    lx = 1;
 
     DivMod(NULL, b, base, nbase, m, nm);
     Zero(x, PRODW);
@@ -557,9 +557,9 @@ BnModExp(
     )
 {
     W           res[PRODW];
-    unsigned    lm = Len(modulus->d, modulus->size);
-    unsigned    ln = Len(number->d, number->size);
-    unsigned    le = Len(exponent->d, exponent->size);
+    W    lm = Len(modulus->d, modulus->size);
+    W    ln = Len(number->d, number->size);
+    W    le = Len(exponent->d, exponent->size);
 
     s_modExpCalls++;
     pAssert(lm != 0 && lm <= OPW && ln <= PRODW);
@@ -589,9 +589,9 @@ BnModInverse(
     W           r0[PRODW], r1[PRODW], r2[PRODW];
     W           t0[PRODW], t1[PRODW], t2[PRODW];
     W           q[PRODW], prod[PRODW], qt[PRODW];
-    unsigned    lm = Len(modulus->d, modulus->size);
-    unsigned    ln = Len(number->d, number->size);
-    unsigned    l0, l1, lq;
+    W    lm = Len(modulus->d, modulus->size);
+    W    ln = Len(number->d, number->size);
+    W    l0, l1, lq;
 
     pAssert(lm != 0 && lm <= OPW);
     if(lm == 0 || lm > OPW)
@@ -657,10 +657,10 @@ typedef struct
 } JPOINT;
 
 static BOOL
-FieldIsZero(const W *a, unsigned n)
+FieldIsZero(const W *a, W n)
 {
     W acc = 0;
-    unsigned i;
+    W i;
     for(i = 0; i < n; i++)
         acc |= a[i];
     return acc == 0;
@@ -669,7 +669,7 @@ FieldIsZero(const W *a, unsigned n)
 static void
 FeAdd(W *r, const W *a, const W *b, const FIELD *F)
 {
-    unsigned n = F->f.n;
+    W n = F->f.n;
     W t[ECW];
     W carry = AddN(t, a, b, n);
     if(carry != 0 || Cmp(t, Len(t, n), F->f.m, n) >= 0)
@@ -680,7 +680,7 @@ FeAdd(W *r, const W *a, const W *b, const FIELD *F)
 static void
 FeSub(W *r, const W *a, const W *b, const FIELD *F)
 {
-    unsigned n = F->f.n;
+    W n = F->f.n;
     W t[ECW];
     if(SubN(t, a, b, n) != 0)
         AddN(t, t, F->f.m, n);
@@ -694,10 +694,10 @@ FeMul(W *r, const W *a, const W *b, const FIELD *F)
 }
 
 static void
-FeToMont(W *r, const W *a, unsigned na, const FIELD *F)
+FeToMont(W *r, const W *a, W na, const FIELD *F)
 {
     W t[ECW];
-    unsigned n = F->f.n;
+    W n = F->f.n;
     Zero(t, ECW);
     Copy(t, a, na < n ? na : n);
     MontMul(r, t, F->f.r2, &F->f);
@@ -716,7 +716,7 @@ FeFromMont(W *r, const W *a, const FIELD *F)
 static void
 FeInv(W *r, const W *a, const FIELD *F)
 {
-    unsigned n = F->f.n;
+    W n = F->f.n;
     W e[ECW];
     W x[ECW];
     int bit;
@@ -725,7 +725,7 @@ FeInv(W *r, const W *a, const FIELD *F)
     e[0] -= 2;
     if(e[0] > F->f.m[0])
     {
-        unsigned i = 1;
+        W i = 1;
         while(i < n && e[i]-- == 0)
             i++;
     }
@@ -742,7 +742,7 @@ FeInv(W *r, const W *a, const FIELD *F)
 static BOOL
 FieldInit(FIELD *F, bigConst prime, bigConst a)
 {
-    unsigned n = Len(prime->d, prime->size);
+    W n = Len(prime->d, prime->size);
     W        t[ECW];
     pAssert(n != 0 && n <= ECW && (prime->d[0] & 1));
     if(n == 0 || n > ECW)
@@ -791,7 +791,7 @@ JFromAffine(JPOINT *P, pointConst S, const FIELD *F)
 static void
 JDouble(JPOINT *R, const JPOINT *P, const FIELD *F)
 {
-    unsigned n = F->f.n;
+    W n = F->f.n;
     W   yy[ECW], s[ECW], m[ECW], t[ECW], zz[ECW], x3[ECW], y3[ECW], z3[ECW];
 
     if(JIsInfinity(P, F) || FieldIsZero(P->y, n))
@@ -830,7 +830,7 @@ JDouble(JPOINT *R, const JPOINT *P, const FIELD *F)
 static void
 JAdd(JPOINT *R, const JPOINT *P, const JPOINT *Q, const FIELD *F)
 {
-    unsigned n = F->f.n;
+    W n = F->f.n;
     W   z1z1[ECW], z2z2[ECW], u1[ECW], u2[ECW], s1[ECW], s2[ECW], h[ECW], r[ECW];
     W   hh[ECW], hhh[ECW], v[ECW], x3[ECW], y3[ECW], z3[ECW], t[ECW];
 
@@ -881,7 +881,7 @@ JAdd(JPOINT *R, const JPOINT *P, const JPOINT *Q, const FIELD *F)
 }
 
 static void
-JScalarMul(JPOINT *R, const JPOINT *P, const W *k, unsigned nk, const FIELD *F)
+JScalarMul(JPOINT *R, const JPOINT *P, const W *k, W nk, const FIELD *F)
 {
     JPOINT  acc;
     int     bit;
@@ -895,14 +895,14 @@ JScalarMul(JPOINT *R, const JPOINT *P, const W *k, unsigned nk, const FIELD *F)
             JAdd(&acc, &acc, P, F);
     }
     *R = acc;
-    NoteScratch((unsigned)(sizeof(JPOINT) / sizeof(W)) * 4 + 12 * ECW);
+    NoteScratch((W)(sizeof(JPOINT) / sizeof(W)) * 4 + 12 * ECW);
 }
 
 // Convert to affine and store into R. Returns FALSE (and z = 0) for infinity.
 static BOOL
 JToAffine(bigPoint R, const JPOINT *P, const FIELD *F)
 {
-    unsigned n = F->f.n;
+    W n = F->f.n;
     W zi[ECW], zi2[ECW], zi3[ECW], x[ECW], y[ECW];
 
     if(JIsInfinity(P, F))
