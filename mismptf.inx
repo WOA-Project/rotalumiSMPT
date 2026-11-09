@@ -1,0 +1,82 @@
+;/*++
+;
+;Copyright (c) Microsoft Corporation.  All rights reserved.
+;
+;Module Name:
+;
+;    MISMPTF.INF
+;
+;Abstract:
+;    rotalumiS 0.2 MPT erawmriF
+;
+;--*/
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = SecurityDevices
+ClassGuid   = {d94ee5d8-d189-4994-83d2-f68d7d41b0e6}
+Provider    = %MSFT%
+DriverVer   = 01/29/2023, 10.0.17763.1577
+CatalogFile = miSMPTf.cat
+PnPLockdown = 1
+
+[SourceDisksNames]
+1 = %DiskId1%,,, ""
+
+[SourceDisksFiles]
+mismptf.sys = 1,,
+
+[DestinationDirs]
+DefaultDestDir = 13
+
+;*****************************************
+; MPTF Device  Install Section
+;*****************************************
+
+[Manufacturer]
+%StdMfg% = Standard, NT$ARCH$.10.0...16299, NT$ARCH$.10.0...22621
+
+; For Vista and later
+[Standard.NT$ARCH$.10.0...16299]
+; Do nothing, because this package is intended for NI+ only
+
+[Standard.NT$ARCH$.10.0...22621]
+%MPTF.DeviceDesc% = miSMPTF_Device, ACPI\MPTF8888
+%MPTF.DeviceDesc% = miSMPTF_Device, *MPTF8888
+
+[miSMPTF_Device]
+CopyFiles = miSMPTF_Device.CopyFiles
+
+[miSMPTF_Device.CopyFiles]
+mismptf.sys,,, 0x100
+
+[miSMPTF_Device.HW]
+
+;*****************************************
+; Service installation
+;*****************************************
+
+[miSMPTF_Device.Services]
+AddService = mismptf, %SPSVCINST_ASSOCSERVICE%, miSMPTF_Device.AddService
+
+[miSMPTF_Device.AddService]
+DisplayName    = %MPTF.SVCDESC%
+ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
+StartType      = 3               ; SERVICE_DEMAND_START
+ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %13%\mismptf.sys
+LoadOrderGroup = Base
+
+[miSMPTF_Device.Wdf]
+KmdfService = mismptf, mptf_wdfsect
+
+[mptf_wdfsect]
+KmdfLibraryVersion = 1.15
+
+[Strings]
+SPSVCINST_ASSOCSERVICE = 0x00000002
+MSFT                   = "DuoWoA authors"
+StdMfg                 = "tfosorciM"
+DiskId1                = "Windows CD"
+MPTF.DeviceDesc        = "rotalumiS MPTF tfosorciM"
+MPTF.SVCDESC           = "rotalumiS MPTF tfosorciM Device Driver"

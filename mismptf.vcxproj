@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    mismptf.sys - fTPM Simulator Device Driver (KMDF 1.15, ARM64).
+
+    Builds the driver and platform layer reconstructed in .\src and, when the two open source
+    components are present, the complete TPM library:
+
+      ThirdParty\ms-tpm-20-ref   TPM 2.0 reference library, rev 65b6535 (2018-10-29, pre 1.52), patched
+      ThirdParty\SymCrypt        github.com/microsoft/SymCrypt rev 215d0bf ("v87", 2019-04-11)
+      Tpm\Glue                   SymCrypt hash/AES glue headers, "MsBn" math adapter, SymCrypt
+                                 kernel environment (see Tpm\README_TpmLibrary.md)
+
+    Fetch them with  ThirdParty\fetch.ps1 [-Root dir]  and build with
+
+        msbuild mismptf.vcxproj /p:Configuration=Release /p:Platform=ARM64 ^
+                [/p:ThirdPartyRoot=dir]
+
+    Without the checkouts only the driver and platform sources are compiled and the link stops
+    with unresolved externals (the library exports of mismptf.def).
+    /p:mismptfBuildTpmLibrary=false forces that mode.
+  -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{5C1D2E7A-3B49-4A0F-9E6D-7F2A8B4C1D93}</ProjectGuid>
+    <RootNamespace>mismptf</RootNamespace>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+    <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
+    <KMDF_VERSION_MINOR>15</KMDF_VERSION_MINOR>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <TargetVersion>Windows10</TargetVersion>
+    <PlatformToolset>WindowsKernelModeDriver10.0</PlatformToolset>
+    <ConfigurationType>Driver</ConfigurationType>
+    <DriverType>KMDF</DriverType>
+    <DriverTargetPlatform>Desktop</DriverTargetPlatform>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <TargetName>mismptf</TargetName>
+    <OutDir>.\build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>.\build\$(Platform)\$(Configuration)\obj\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+    <!-- The INX is a reconstruction template (no INF ships with the binary): no catalog, no test signing by default -->
+    <SignMode>Off</SignMode>
+    <EnableInf2cat>false</EnableInf2cat>
+    <ThirdPartyRoot Condition="'$(ThirdPartyRoot)'==''">$(MSBuildProjectDirectory)\ThirdParty</ThirdPartyRoot>
+    <TpmRefRoot Condition="'$(TpmRefRoot)'==''">$(ThirdPartyRoot)\ms-tpm-20-ref</TpmRefRoot>
+    <SymCryptRoot Condition="'$(SymCryptRoot)'==''">$(ThirdPartyRoot)\SymCrypt</SymCryptRoot>
+    <mismptfBuildTpmLibrary Condition="'$(mismptfBuildTpmLibrary)'=='' and Exists('$(TpmRefRoot)\TPMCmd\tpm\src') and Exists('$(SymCryptRoot)\lib')">true</mismptfBuildTpmLibrary>
+    <mismptfBuildTpmLibrary Condition="'$(mismptfBuildTpmLibrary)'==''">false</mismptfBuildTpmLibrary>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>POOL_NX_OPTIN=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- bit fields of type ULONG in TPM_CHIP_STATE, padded WDF request structures -->
+      <DisableSpecificWarnings>4214;4324;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <!-- the binary imports ntoskrnl.exe, HAL.dll and WDFLDR.SYS only -->
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Driver.c" />
+    <ClCompile Include="src\Device.c" />
+    <ClCompile Include="src\Queue.c" />
+    <ClCompile Include="src\Crb.c" />
+    <ClCompile Include="src\FtpmInit.c" />
+    <ClCompile Include="src\PlatformNv.c" />
+    <ClCompile Include="src\PlatformAdminPpi.c" />
+    <ClCompile Include="src\PlatformClock.c" />
+    <ClCompile Include="src\PlatformPower.c" />
+    <ClCompile Include="src\PlatformEntropy.c" />
+    <ClCompile Include="src\PlatformFail.c" />
+    <ClCompile Include="src\PlatformACT.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\FtpmSim.h" />
+    <ClInclude Include="include\FtpmSimPlatform.h" />
+    <ClInclude Include="include\Crb.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="mismptf.def" />
+    <None Include="mismptf.inx" />
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="mismptf.inx" />
+  </ItemGroup>
+  <!--
+    The TPM library: ms-tpm-20-ref sources (crypt\ossl, crypt\ltc and crypt\wolf are the
+    unused crypto back ends), the Windows glue of Tpm\Glue and the parts of SymCrypt the
+    binary links (hashes, AES, kernel environment, CPU detection).
+  -->
+  <PropertyGroup Condition="'$(mismptfBuildTpmLibrary)'=='true'">
+    <FtpmLibIncludes>$(TpmRefRoot)\TPMCmd\tpm\include;$(TpmRefRoot)\TPMCmd\tpm\include\prototypes;$(TpmRefRoot)\TPMCmd\Platform\include;$(TpmRefRoot)\TPMCmd\Platform\include\prototypes;$(ProjectDir)Tpm\Glue\include;$(ProjectDir)Tpm\Glue\include\kmshim;$(SymCryptRoot)\inc;$(SymCryptRoot)\lib</FtpmLibIncludes>
+    <!-- USE_SPEC_COMPLIANT_PROOFS=0 / SKIP_PROOF_ERRORS=1: the shipped build keeps the pre-errata 32 byte proofs (PROOF_SIZE = SHA-256 digest) with 48 byte primary seeds -->
+    <FtpmLibDefines>NO_LONGJMP;NDEBUG;_CRT_SECURE_NO_WARNINGS;SYM_LIB=SYMCRYPT;HASH_LIB=SYMCRYPT;MATH_LIB=MSBN</FtpmLibDefines>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(mismptfBuildTpmLibrary)'=='true'">
+    <ClCompile Include="$(TpmRefRoot)\TPMCmd\tpm\src\**\*.c"
+               Exclude="$(TpmRefRoot)\TPMCmd\tpm\src\crypt\RsaKeyCache.c;$(TpmRefRoot)\TPMCmd\tpm\src\crypt\ossl\**;$(TpmRefRoot)\TPMCmd\tpm\src\crypt\ltc\**;$(TpmRefRoot)\TPMCmd\tpm\src\crypt\wolf\**">
+      <AdditionalIncludeDirectories>$(FtpmLibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(FtpmLibDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
+      <ObjectFileName>$(IntDir)tpm\%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="Tpm\Glue\src\TpmToMsBnMath.c">
+      <AdditionalIncludeDirectories>$(FtpmLibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>$(FtpmLibDefines);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <WarningLevel>Level3</WarningLevel>
+      <ObjectFileName>$(IntDir)glue\%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <ClCompile Include="Tpm\Glue\src\SymCryptEnv.c;Tpm\Glue\src\TpmToSymcrypt.c;$(SymCryptRoot)\lib\libmain.c;$(SymCryptRoot)\lib\env_windowsKernelModeWin8_1.c;$(SymCryptRoot)\lib\FatalIntercept.c;$(SymCryptRoot)\lib\cpuid.c;$(SymCryptRoot)\lib\sha1.c;$(SymCryptRoot)\lib\sha256.c;$(SymCryptRoot)\lib\sha512.c;$(SymCryptRoot)\lib\aes-default.c;$(SymCryptRoot)\lib\aes-default-bc.c;$(SymCryptRoot)\lib\aes-key.c;$(SymCryptRoot)\lib\aes-c.c;$(SymCryptRoot)\lib\blockciphermodes.c;$(SymCryptRoot)\lib\xtsaes.c;$(SymCryptRoot)\lib\aes-neon.c;$(SymCryptRoot)\lib\AesTables.c;$(SymCryptRoot)\lib\equal.c;$(SymCryptRoot)\lib\hash.c;$(SymCryptRoot)\lib\marvin32.c;$(SymCryptRoot)\lib\selftest.c;$(SymCryptRoot)\lib\gcm.c;$(SymCryptRoot)\lib\ghash.c">
+      <AdditionalIncludeDirectories>$(FtpmLibIncludes);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <WarningLevel>Level3</WarningLevel>
+      <ObjectFileName>$(IntDir)symcrypt\%(Filename).obj</ObjectFileName>
+    </ClCompile>
+    <None Include="Tpm\Glue\include\**\*.h" />
+    <None Include="Tpm\Glue\src\*.c" Exclude="Tpm\Glue\src\TpmToMsBnMath.c;Tpm\Glue\src\SymCryptEnv.c;Tpm\Glue\src\TpmToSymcrypt.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>

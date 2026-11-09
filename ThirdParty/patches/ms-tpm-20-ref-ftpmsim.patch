@@ -1,0 +1,69 @@
+diff --git a/TPMCmd/tpm/include/TpmBuildSwitches.h b/TPMCmd/tpm/include/TpmBuildSwitches.h
+index f3d88b0..f6939ca 100644
+--- a/TPMCmd/tpm/include/TpmBuildSwitches.h
++++ b/TPMCmd/tpm/include/TpmBuildSwitches.h
+@@ -289,7 +289,7 @@
+ #if !(defined USE_SPEC_COMPLIANT_PROOFS)                                            \
+     || ((USE_SPEC_COMPLIANT_PROOFS != NO) && (USE_SPEC_COMPLIANT_PROOFS != YES))
+ #   undef   USE_SPEC_COMPLIANT_PROOFS
+-#   define  USE_SPEC_COMPLIANT_PROOFS   YES     // Default: Either YES or NO
++#   define  USE_SPEC_COMPLIANT_PROOFS   NO     // Default: Either YES or NO
+ #endif
+ 
+ // Comment this out to allow compile to continue even though the chosen proof values
+@@ -298,7 +298,7 @@
+ #if !(defined SKIP_PROOF_ERRORS)                                                    \
+     || ((SKIP_PROOF_ERRORS != NO) && (SKIP_PROOF_ERRORS != YES))
+ #   undef   SKIP_PROOF_ERRORS
+-#   define  SKIP_PROOF_ERRORS           NO      // Default: Either YES or NO
++#   define  SKIP_PROOF_ERRORS           YES      // Default: Either YES or NO
+ #endif
+ 
+ // This define is used to eliminate the use of bit-fields. It can be enabled for big- 
+@@ -327,7 +327,7 @@
+ #if !(defined CERTIFYX509_DEBUG)                                                    \
+     || ((CERTIFYX509_DEBUG != NO) && (CERTIFYX509_DEBUG != YES))
+ #   undef   CERTIFYX509_DEBUG
+-#   define  CERTIFYX509_DEBUG YES               // Default: Either YES or NO
++#   define  CERTIFYX509_DEBUG NO               // Default: Either YES or NO
+ #endif
+ 
+ // This define is used to enable the new table-driven marshaling code. 
+diff --git a/TPMCmd/tpm/include/TpmProfile.h b/TPMCmd/tpm/include/TpmProfile.h
+index e329668..e509ecd 100644
+--- a/TPMCmd/tpm/include/TpmProfile.h
++++ b/TPMCmd/tpm/include/TpmProfile.h
+@@ -198,8 +198,10 @@
+ #define MAX_ALG_LIST_SIZE               64
+ #endif
+ #ifndef PRIMARY_SEED_SIZE
+-#define PRIMARY_SEED_SIZE               32
++#define PRIMARY_SEED_SIZE               48
+ #endif
++#define CONTEXT_HASH_ALGORITHM     SHA256
++#define CONTEXT_INTEGRITY_HASH_ALG TPM_ALG_SHA256
+ #ifndef CONTEXT_ENCRYPT_ALGORITHM
+ #define CONTEXT_ENCRYPT_ALGORITHM       AES
+ #endif
+@@ -428,10 +430,10 @@
+ 
+ // Table 0:5 - Defines for Implemented Commands
+ #ifndef CC_AC_GetCapability
+-#define CC_AC_GetCapability                 CC_YES
++#define CC_AC_GetCapability                 CC_NO
+ #endif
+ #ifndef CC_AC_Send
+-#define CC_AC_Send                          CC_YES
++#define CC_AC_Send                          CC_NO
+ #endif
+ #ifndef CC_ActivateCredential
+ #define CC_ActivateCredential               CC_YES
+@@ -716,7 +718,7 @@
+ #define CC_PolicyTicket                     CC_YES
+ #endif
+ #ifndef CC_Policy_AC_SendSelect
+-#define CC_Policy_AC_SendSelect             CC_YES
++#define CC_Policy_AC_SendSelect             CC_NO
+ #endif
+ #ifndef CC_Quote
+ #define CC_Quote                            CC_YES
